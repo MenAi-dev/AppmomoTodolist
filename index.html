@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Mes tâches</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Mes tâches">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/modals.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <h1>Mes tâches</h1>
+      <p id="dateJour"></p>
+    </div>
+    <div class="header-actions">
+      <button class="cat-btn" id="btnDonnees" type="button">Sauvegarde</button>
+    </div>
+  </header>
+
+  <div class="resume">
+    <div class="resume-haut">
+      <div>
+        <div class="label">Restantes</div>
+        <div class="valeur" id="resteNb">0</div>
+      </div>
+      <div class="resume-droite">
+        <div id="resumeTotal">0 tâche</div>
+        <div class="retard-info" id="resumeRetard" hidden></div>
+      </div>
+    </div>
+    <div class="barre"><div class="barre-fill" id="barreFill"></div></div>
+  </div>
+
+  <form class="ajout" id="formAjout" autocomplete="off">
+    <div class="ajout-ligne">
+      <input id="inputTitre" type="text" placeholder="Nouvelle tâche…" maxlength="140" enterkeyhint="done" aria-label="Nouvelle tâche">
+      <button type="submit" class="btn-plus" aria-label="Ajouter la tâche">+</button>
+    </div>
+    <div class="ajout-options">
+      <label class="chip" id="chipDate">
+        <span id="chipDateTxt">📅 Date</span>
+        <input type="date" id="inputDate" aria-label="Date d'échéance">
+      </label>
+      <button type="button" class="chip chip-x" id="effacerDate" hidden aria-label="Retirer la date">✕</button>
+      <button type="button" class="chip" id="chipImportant">☆ Important</button>
+    </div>
+  </form>
+
+  <nav class="nav" id="nav">
+    <button class="nav-btn actif" data-filtre="afaire" type="button"><span class="nav-fond"></span>À faire <span class="nav-n" id="navAFaire">0</span></button>
+    <button class="nav-btn" data-filtre="faites" type="button"><span class="nav-fond"></span>Terminées <span class="nav-n" id="navFaites">0</span></button>
+    <button class="nav-btn" data-filtre="analyse" type="button"><span class="nav-fond"></span>Analyse</button>
+  </nav>
+
+  <div id="liste"></div>
+
+  <footer>Fonctionne hors ligne · Données enregistrées sur cet appareil</footer>
+</div>
+
+<!-- Modifier une tâche -->
+<div class="overlay" id="overlayEdit">
+  <div class="modal"><div class="sheet-grabber"></div>
+    <h3>Modifier la tâche</h3>
+    <div class="sub">Change le texte, la date ou l'importance.</div>
+    <div class="champ">
+      <label for="editTitre">Tâche</label>
+      <input id="editTitre" type="text" maxlength="140">
+    </div>
+    <div class="champ">
+      <label for="editDate">Date (facultatif)</label>
+      <input id="editDate" type="date">
+    </div>
+    <div class="champ">
+      <label for="editImportant">Importance</label>
+      <select id="editImportant">
+        <option value="0">Normale</option>
+        <option value="1">Importante ★</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-annuler" id="editAnnuler" type="button">Annuler</button>
+      <button class="btn-valider" id="editValider" type="button">Enregistrer</button>
+    </div>
+    <div class="modal-delete-link"><button id="editSuppr" type="button">Supprimer cette tâche</button></div>
+  </div>
+</div>
+
+<!-- Sauvegarde -->
+<div class="overlay" id="overlayDonnees">
+  <div class="modal"><div class="sheet-grabber"></div>
+    <h3>Sauvegarde</h3>
+    <div class="sub">Tes tâches sont stockées dans ce navigateur. Exporte-les de temps en temps pour ne rien perdre (changement de téléphone, données du navigateur effacées…).</div>
+    <div class="modal-actions col">
+      <button class="btn-valider" id="btnExport" type="button">Exporter mes tâches</button>
+      <button class="btn-annuler" id="btnImport" type="button">Importer une sauvegarde</button>
+      <button class="btn-annuler" id="donneesFermer" type="button">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="fichierImport" accept="application/json,.json" hidden>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="js/helpers.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/render.js"></script>
+<script src="js/events.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
