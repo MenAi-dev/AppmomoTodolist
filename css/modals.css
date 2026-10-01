@@ -40,3 +40,7 @@
   .btn-valider:hover{background:var(--bleu-clair);}
   .modal-delete-link{margin-top:16px; text-align:center;}
   .modal-delete-link button{background:none; border:none; color:var(--rouge); font-size:0.82rem; cursor:pointer;}
+
+  .stat-ligne b.ok{color:var(--vert);}
+  .stat-ligne b.ko{color:var(--orange);}
+  #installDiag{margin-top:-4px;}
