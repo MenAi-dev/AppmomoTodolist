@@ -17,6 +17,10 @@ function reinitialiserOptions(){
   majOptionsAjout();
 }
 
+// Ouvre explicitement le calendrier (sur ordinateur, un clic sur le champ ne l'ouvre pas tout seul)
+$('inputDate').addEventListener('click', e=>{
+  try{ if(e.target.showPicker) e.target.showPicker(); }catch(_){ /* déjà ouvert ou non supporté */ }
+});
 $('inputDate').addEventListener('change', e=>{ nouvelleDate = e.target.value; majOptionsAjout(); });
 $('effacerDate').addEventListener('click', ()=>{ nouvelleDate = ''; $('inputDate').value = ''; majOptionsAjout(); });
 $('chipImportant').addEventListener('click', ()=>{ nouvelImportant = !nouvelImportant; majOptionsAjout(); });
