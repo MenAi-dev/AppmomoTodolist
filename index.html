@@ -25,6 +25,7 @@
       <p id="dateJour"></p>
     </div>
     <div class="header-actions">
+      <button class="cat-btn" id="btnInstaller" type="button">Installer</button>
       <button class="cat-btn" id="btnDonnees" type="button">Sauvegarde</button>
     </div>
   </header>
@@ -110,6 +111,19 @@
   </div>
 </div>
 
+<!-- Installation -->
+<div class="overlay" id="overlayInstall">
+  <div class="modal"><div class="sheet-grabber"></div>
+    <h3>Installer l'application</h3>
+    <div class="sub" id="installAide"></div>
+    <div class="groupe-liste stat-liste" id="installDiag"></div>
+    <div class="modal-actions col">
+      <button class="btn-valider" id="btnInstallerNatif" type="button" hidden>Installer maintenant</button>
+      <button class="btn-annuler" id="installFermer" type="button">Fermer</button>
+    </div>
+  </div>
+</div>
+
 <input type="file" id="fichierImport" accept="application/json,.json" hidden>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
@@ -117,6 +131,7 @@
 <script src="js/storage.js"></script>
 <script src="js/render.js"></script>
 <script src="js/events.js"></script>
+<script src="js/install.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
