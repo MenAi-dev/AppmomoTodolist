@@ -41,7 +41,7 @@
   .chip.actif{background:rgba(10,132,255,0.2); color:var(--bleu-clair);}
   .chip.actif.important{background:rgba(255,214,10,0.18); color:var(--jaune);}
   .chip input[type="date"]{
-    position:absolute; inset:0; opacity:0; width:100%; height:100%; margin:0; padding:0; border:0; cursor:pointer; color-scheme:dark; font-size:16px;
+    position:absolute; inset:0; opacity:0; width:100%; height:100%; cursor:pointer; color-scheme:dark;
   }
   .chip-x{padding:7px 11px;}
 
@@ -172,3 +172,55 @@
   .stat-ligne:first-child{border-top:none;}
   .stat-ligne span{color:var(--gris);}
   .stat-ligne b{font-weight:600; text-align:right;}
+
+  /* --- Report des tâches en retard --- */
+  .reporter{display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;}
+  .pill-report{
+    background:rgba(255,159,10,0.15); border:none; color:var(--orange);
+    padding:6px 12px; border-radius:980px; font-size:0.75rem; font-weight:600; cursor:pointer;
+    transition: background .15s, transform .15s var(--spring);
+  }
+  .pill-report:hover{background:rgba(255,159,10,0.25);}
+  .pill-report:active{transform:scale(.95);}
+  .lien-discret.neutre{color:var(--orange);}
+
+  /* --- Tâches récurrentes --- */
+  .tache-meta .repet{margin-left:10px; color:var(--gris); font-weight:500;}
+
+  /* --- Détection automatique à la saisie --- */
+  .apercu{
+    display:flex; justify-content:space-between; align-items:center; gap:12px;
+    margin-top:10px; padding:9px 12px; border-radius:12px;
+    background:rgba(10,132,255,0.12); color:var(--bleu-clair); font-size:0.8rem;
+  }
+  .apercu b{font-weight:700;}
+  .apercu button{
+    background:none; border:none; color:var(--gris-2); font-size:0.78rem; font-weight:600;
+    cursor:pointer; padding:2px 0; flex-shrink:0;
+  }
+
+  /* --- Sous-tâches (checklist) --- */
+  .tache-meta .repet, .tache-meta .sous-chip{margin-left:10px;}
+  .tache-meta > :first-child{margin-left:0;}
+  .sous-chip{
+    background:none; border:none; padding:2px 0; color:var(--gris); font-size:inherit; font-weight:500; cursor:pointer;
+  }
+  .sous-chip.complet{color:var(--vert);}
+  .sous-inline{margin-top:8px; display:flex; flex-direction:column;}
+  .sous-ligne{
+    display:flex; align-items:center; gap:10px; width:100%; text-align:left;
+    background:none; border:none; color:var(--blanc); font-size:0.9rem; line-height:1.35;
+    padding:7px 0; cursor:pointer;
+  }
+  .sous-coche{
+    width:18px; height:18px; border-radius:50%; border:2px solid var(--gris); flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    transition: background .2s var(--spring), border-color .2s;
+  }
+  .sous-ligne.fait .sous-coche{background:var(--bleu); border-color:var(--bleu);}
+  .sous-ligne.fait .sous-coche::after{
+    content:''; width:4px; height:8px; border:solid var(--blanc); border-width:0 2px 2px 0;
+    transform:rotate(45deg) translate(-1px,-1px);
+  }
+  .sous-ligne.fait .sous-titre{color:var(--gris); text-decoration:line-through; text-decoration-color:rgba(142,142,147,.6);}
+  .tache.fait .sous-chip{color:var(--gris);}

@@ -1,5 +1,15 @@
 const CLE_STOCKAGE = 'todoData';
-let taches = []; // { id, titre, fait, important, date, creeLe, faitLe }
+const MAX_SOUS = 30; // sous-tâches max par tâche
+let taches = []; // { id, titre, fait, important, date, repeter, suiteId, archive, sous:[{id,titre,fait}], creeLe, faitLe }
+
+function nettoyerSous(liste){
+  if(!Array.isArray(liste)) return [];
+  return liste.map(s => (s && typeof s.titre === 'string' && s.titre.trim()) ? {
+    id: typeof s.id === 'string' && s.id ? s.id : nouvelId(),
+    titre: s.titre.trim().slice(0,140),
+    fait: !!s.fait
+  } : null).filter(Boolean).slice(0, MAX_SOUS);
+}
 
 function nettoyerTache(t){
   if(!t || typeof t.titre !== 'string' || !t.titre.trim()) return null;
@@ -9,6 +19,10 @@ function nettoyerTache(t){
     fait: !!t.fait,
     important: !!t.important,
     date: dateValide(t.date) ? t.date : '',
+    repeter: REPETITIONS.includes(t.repeter) ? t.repeter : '',
+    suiteId: typeof t.suiteId === 'string' ? t.suiteId : '',
+    archive: !!t.archive && !!t.fait, // seules les tâches terminées s'archivent
+    sous: nettoyerSous(t.sous),
     creeLe: typeof t.creeLe === 'number' ? t.creeLe : Date.now(),
     faitLe: typeof t.faitLe === 'number' ? t.faitLe : null
   };
@@ -20,6 +34,9 @@ function charger(){
     if(brut){
       const data = JSON.parse(brut);
       taches = (Array.isArray(data.taches) ? data.taches : []).map(nettoyerTache).filter(Boolean);
+      // L'historique archivé (utile à l'analyse) est purgé après un an pour ne pas remplir le stockage
+      const limite = Date.now() - 365 * 86400000;
+      taches = taches.filter(t => !(t.archive && (t.faitLe || t.creeLe) < limite));
     }
   }catch(e){ console.error('Erreur de lecture des données', e); taches = []; }
 }
@@ -52,10 +69,11 @@ function importer(fichier){
       const liste = (Array.isArray(data) ? data : data.taches);
       if(!Array.isArray(liste)) throw new Error('format');
       const propres = liste.map(nettoyerTache).filter(Boolean);
-      if(!confirm(`Remplacer tes ${taches.length} tâche(s) actuelle(s) par les ${propres.length} de cette sauvegarde ?`)) return;
+      const nActuelles = taches.filter(t=>!t.archive).length, nImportees = propres.filter(t=>!t.archive).length;
+      if(!confirm(`Remplacer tes ${nActuelles} tâche(s) actuelle(s) par les ${nImportees} de cette sauvegarde ?`)) return;
       taches = propres;
       sauvegarder(); rendre(); fermerDonnees();
-      toast(`${propres.length} tâche(s) importée(s)`);
+      toast(`${nImportees} tâche(s) importée(s)`);
     }catch(e){
       toast('Fichier invalide', 'danger');
     }

@@ -1,4 +1,5 @@
 let filtre = 'afaire';
+const ouverts = new Set(); // tâches dont la checklist est dépliée (état d'affichage, non sauvegardé)
 
 const SVG_COCHE = '<svg viewBox="0 0 24 24"><polyline points="5 12.5 10 17.5 19 7.5"/></svg>';
 
@@ -14,11 +15,29 @@ function trier(a, b){
 
 function htmlTache(t){
   const aujourdhui = auj();
-  let meta = '';
-  if(t.date){
-    const cls = (!t.fait && t.date < aujourdhui) ? 'retard' : (t.date === aujourdhui ? 'auj' : '');
-    meta = `<div class="tache-meta ${cls}">${echapper(libelleDate(t.date))}</div>`;
+  let meta = '', checklist = '';
+  const sous = t.sous || [];
+  const ouvert = sous.length > 0 && ouverts.has(t.id);
+  const nFaites = sous.filter(s=>s.fait).length;
+  const chip = sous.length
+    ? `<button class="sous-chip${nFaites === sous.length ? ' complet' : ''}" type="button" data-act="sous-voir" aria-expanded="${ouvert}">☑ ${nFaites}/${sous.length} ${ouvert ? '▾' : '▸'}</button>`
+    : '';
+  const rep = t.repeter ? `<span class="repet">🔁 ${LIBELLES_REPET[t.repeter]}</span>` : '';
+  if(ouvert){
+    checklist = `<div class="sous-inline">${sous.map(s=>`<button class="sous-ligne${s.fait ? ' fait' : ''}" type="button" data-act="sous" data-sid="${echapper(s.id)}"><span class="sous-coche"></span><span class="sous-titre">${echapper(s.titre)}</span></button>`).join('')}</div>`;
   }
+  if(t.date || rep || chip){
+    const enRetard = !!t.date && !t.fait && t.date < aujourdhui;
+    const cls = enRetard ? 'retard' : (t.date === aujourdhui ? 'auj' : '');
+    meta = `<div class="tache-meta ${cls}">${t.date ? `<span>${echapper(libelleDate(t.date))}</span>` : ''}${rep}${chip}</div>`;
+    if(enRetard){
+      meta += `<div class="reporter">
+        <button class="pill-report" type="button" data-act="reporter" data-jours="0">Reporter à aujourd'hui</button>
+        <button class="pill-report" type="button" data-act="reporter" data-jours="1">Demain</button>
+      </div>`;
+    }
+  }
+  meta += checklist;
   return `<div class="tache${t.fait?' fait':''}${t.important?' important':''}" data-id="${t.id}">
     <button class="coche" type="button" data-act="toggle" aria-label="${t.fait?'Marquer comme à faire':'Marquer comme faite'}">${SVG_COCHE}</button>
     <div class="tache-corps" data-act="edit"><div class="tache-titre">${echapper(t.titre)}</div>${meta}</div>
@@ -28,15 +47,16 @@ function htmlTache(t){
   </div>`;
 }
 
-function htmlGroupe(titre, liste, cls){
+function htmlGroupe(titre, liste, cls, actionHtml){
   if(!liste.length) return '';
-  return `<div class="groupe"><div class="groupe-titre ${cls||''}"><span>${titre}</span></div>
+  return `<div class="groupe"><div class="groupe-titre ${cls||''}"><span>${titre}</span>${actionHtml||''}</div>
     <div class="groupe-liste">${liste.map(htmlTache).join('')}</div></div>`;
 }
 
 function rendre(){
-  const restantes = taches.filter(t=>!t.fait);
-  const faites = taches.filter(t=>t.fait);
+  const visibles = taches.filter(t=>!t.archive); // les tâches archivées ne comptent que dans l'analyse
+  const restantes = visibles.filter(t=>!t.fait);
+  const faites = visibles.filter(t=>t.fait);
   const aujourdhui = auj();
   const enRetard = restantes.filter(t=>t.date && t.date < aujourdhui);
 
@@ -45,13 +65,13 @@ function rendre(){
     new Date().toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' })
   );
   $('resteNb').textContent = restantes.length;
-  $('resumeTotal').textContent = `sur ${taches.length} tâche${taches.length>1?'s':''}`;
+  $('resumeTotal').textContent = `sur ${visibles.length} tâche${visibles.length>1?'s':''}`;
   const r = $('resumeRetard');
   r.hidden = !enRetard.length;
   r.textContent = `${enRetard.length} en retard`;
-  const pct = taches.length ? Math.round(faites.length / taches.length * 100) : 0;
+  const pct = visibles.length ? Math.round(faites.length / visibles.length * 100) : 0;
   $('barreFill').style.width = pct + '%';
-  $('barreFill').classList.toggle('complet', taches.length > 0 && pct === 100);
+  $('barreFill').classList.toggle('complet', visibles.length > 0 && pct === 100);
   $('navAFaire').textContent = restantes.length;
   $('navFaites').textContent = faites.length;
 
@@ -60,12 +80,15 @@ function rendre(){
   let html = '';
   if(filtre === 'afaire'){
     if(!restantes.length){
-      html = taches.length
+      html = visibles.length
         ? '<div class="vide"><b>Tout est fait 🎉</b>Profite, ou ajoute une nouvelle tâche.</div>'
         : '<div class="vide"><b>Aucune tâche</b>Écris ta première tâche ci-dessus.</div>';
     } else {
       const trie = restantes.slice().sort(trier);
-      html += htmlGroupe('En retard', trie.filter(t=>t.date && t.date < aujourdhui), 'retard');
+      const retardees = trie.filter(t=>t.date && t.date < aujourdhui);
+      const actionRetard = retardees.length > 1
+        ? '<button class="lien-discret neutre" type="button" data-act="reporter-tout">Tout reporter à aujourd\'hui</button>' : '';
+      html += htmlGroupe('En retard', retardees, 'retard', actionRetard);
       html += htmlGroupe("Aujourd'hui", trie.filter(t=>t.date === aujourdhui));
       html += htmlGroupe('À venir', trie.filter(t=>t.date && t.date > aujourdhui));
       html += htmlGroupe('Sans date', trie.filter(t=>!t.date));
@@ -76,7 +99,7 @@ function rendre(){
     } else {
       const trie = faites.slice().sort((a,b)=>(b.faitLe||0)-(a.faitLe||0));
       html = `<div class="groupe"><div class="groupe-titre"><span>${faites.length} terminée${faites.length>1?'s':''}</span>
-        <button class="lien-discret" type="button" data-act="vider">Tout supprimer</button></div>
+        <button class="lien-discret" type="button" data-act="vider">Tout archiver</button></div>
         <div class="groupe-liste">${trie.map(htmlTache).join('')}</div></div>`;
     }
   }

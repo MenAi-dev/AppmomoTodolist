@@ -25,7 +25,6 @@
       <p id="dateJour"></p>
     </div>
     <div class="header-actions">
-      <button class="cat-btn" id="btnInstaller" type="button">Installer</button>
       <button class="cat-btn" id="btnDonnees" type="button">Sauvegarde</button>
     </div>
   </header>
@@ -46,7 +45,7 @@
 
   <form class="ajout" id="formAjout" autocomplete="off">
     <div class="ajout-ligne">
-      <input id="inputTitre" type="text" placeholder="Nouvelle tâche…" maxlength="140" enterkeyhint="done" aria-label="Nouvelle tâche">
+      <input id="inputTitre" type="text" placeholder="Nouvelle tâche… ex. Appeler Paul demain !" maxlength="140" enterkeyhint="done" aria-label="Nouvelle tâche">
       <button type="submit" class="btn-plus" aria-label="Ajouter la tâche">+</button>
     </div>
     <div class="ajout-options">
@@ -56,7 +55,9 @@
       </label>
       <button type="button" class="chip chip-x" id="effacerDate" hidden aria-label="Retirer la date">✕</button>
       <button type="button" class="chip" id="chipImportant">☆ Important</button>
+      <button type="button" class="chip" id="chipRepeter">🔁 Répéter</button>
     </div>
+    <div class="apercu" id="apercu" hidden></div>
   </form>
 
   <nav class="nav" id="nav">
@@ -74,7 +75,7 @@
 <div class="overlay" id="overlayEdit">
   <div class="modal"><div class="sheet-grabber"></div>
     <h3>Modifier la tâche</h3>
-    <div class="sub">Change le texte, la date ou l'importance.</div>
+    <div class="sub">Change le texte, la date, l'importance, la répétition ou les sous-tâches.</div>
     <div class="champ">
       <label for="editTitre">Tâche</label>
       <input id="editTitre" type="text" maxlength="140">
@@ -90,6 +91,20 @@
         <option value="1">Importante ★</option>
       </select>
     </div>
+    <div class="champ">
+      <label for="editRepeter">Répétition</label>
+      <select id="editRepeter">
+        <option value="">Jamais</option>
+        <option value="jour">Chaque jour</option>
+        <option value="semaine">Chaque semaine</option>
+        <option value="mois">Chaque mois</option>
+      </select>
+    </div>
+    <div class="champ">
+      <label for="editSousNouvelle">Sous-tâches</label>
+      <div class="sous-liste" id="editSous"></div>
+      <input id="editSousNouvelle" type="text" maxlength="140" placeholder="Ajouter une sous-tâche…" enterkeyhint="done" autocomplete="off">
+    </div>
     <div class="modal-actions">
       <button class="btn-annuler" id="editAnnuler" type="button">Annuler</button>
       <button class="btn-valider" id="editValider" type="button">Enregistrer</button>
@@ -102,25 +117,13 @@
 <div class="overlay" id="overlayDonnees">
   <div class="modal"><div class="sheet-grabber"></div>
     <h3>Sauvegarde</h3>
-    <div class="sub">Tes tâches sont stockées dans ce navigateur. Exporte-les de temps en temps pour ne rien perdre (changement de téléphone, données du navigateur effacées…).</div>
+    <div class="sub">Tes tâches sont stockées dans ce navigateur. Exporte-les de temps en temps pour ne rien perdre (changement de téléphone, données du navigateur effacées…). Les tâches archivées restent comptées dans l'onglet Analyse.</div>
     <div class="modal-actions col">
       <button class="btn-valider" id="btnExport" type="button">Exporter mes tâches</button>
       <button class="btn-annuler" id="btnImport" type="button">Importer une sauvegarde</button>
       <button class="btn-annuler" id="donneesFermer" type="button">Fermer</button>
     </div>
-  </div>
-</div>
-
-<!-- Installation -->
-<div class="overlay" id="overlayInstall">
-  <div class="modal"><div class="sheet-grabber"></div>
-    <h3>Installer l'application</h3>
-    <div class="sub" id="installAide"></div>
-    <div class="groupe-liste stat-liste" id="installDiag"></div>
-    <div class="modal-actions col">
-      <button class="btn-valider" id="btnInstallerNatif" type="button" hidden>Installer maintenant</button>
-      <button class="btn-annuler" id="installFermer" type="button">Fermer</button>
-    </div>
+    <div class="modal-delete-link"><button id="btnHistorique" type="button" hidden>Effacer l'historique archivé</button></div>
   </div>
 </div>
 
@@ -128,10 +131,10 @@
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="js/helpers.js"></script>
+<script src="js/parser.js"></script>
 <script src="js/storage.js"></script>
 <script src="js/render.js"></script>
 <script src="js/events.js"></script>
-<script src="js/install.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

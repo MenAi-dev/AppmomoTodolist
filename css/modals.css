@@ -9,6 +9,7 @@
     background:var(--noir-2); border:1px solid var(--ligne); border-top:none;
     border-radius:24px 24px 0 0;
     padding:10px 22px calc(28px + env(safe-area-inset-bottom)); width:100%; max-width:480px;
+    max-height:90vh; overflow-y:auto;
   }
   @media(min-width:640px){ .modal{border:1px solid var(--ligne); border-radius:var(--rayon); max-width:360px; padding:26px 24px;} }
   .sheet-grabber{width:36px; height:5px; border-radius:3px; background:var(--ligne); margin:0 auto 18px;}
@@ -41,6 +42,17 @@
   .modal-delete-link{margin-top:16px; text-align:center;}
   .modal-delete-link button{background:none; border:none; color:var(--rouge); font-size:0.82rem; cursor:pointer;}
 
-  .stat-ligne b.ok{color:var(--vert);}
-  .stat-ligne b.ko{color:var(--orange);}
-  #installDiag{margin-top:-4px;}
+  /* --- Sous-tâches dans la modale --- */
+  .sous-liste{display:flex; flex-direction:column; gap:8px; margin-bottom:8px; max-height:32vh; overflow-y:auto;}
+  .sous-liste:empty{display:none;}
+  .sous-edit{display:flex; align-items:center; gap:8px;}
+  .sous-edit input{flex:1; min-width:0; width:auto;}
+  .sous-coche-edit{
+    width:22px; height:22px; border-radius:50%; border:2px solid var(--gris); background:none; padding:0;
+    flex-shrink:0; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .sous-coche-edit.fait{background:var(--bleu); border-color:var(--bleu);}
+  .sous-coche-edit.fait::after{
+    content:''; width:5px; height:10px; border:solid var(--blanc); border-width:0 2px 2px 0;
+    transform:rotate(45deg) translate(-1px,-1px);
+  }

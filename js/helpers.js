@@ -31,3 +31,24 @@ function toast(message, type, action){
   clearTimeout(toastTimer);
   toastTimer = setTimeout(()=>el.classList.remove('actif'), action ? 6000 : 3500);
 }
+
+// --- Répétition des tâches ---
+const REPETITIONS = ['', 'jour', 'semaine', 'mois'];
+const LIBELLES_REPET = { jour:'Chaque jour', semaine:'Chaque semaine', mois:'Chaque mois' };
+
+function ajouterMois(iso, n){
+  const [a, m, j] = iso.split('-').map(Number);
+  const d = new Date(a, m - 1 + n, 1, 12);
+  const dernier = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  d.setDate(Math.min(j, dernier)); // 31 janv. -> 28/29 févr.
+  return versISO(d);
+}
+
+// Prochaine échéance strictement après aujourd'hui (même si la tâche était en retard)
+function prochaineDate(iso, repeter){
+  const avancer = d => repeter === 'jour' ? ajouterJours(d,1) : repeter === 'semaine' ? ajouterJours(d,7) : ajouterMois(d,1);
+  const t = auj();
+  let n = avancer(iso || t);
+  while(n <= t) n = avancer(n);
+  return n;
+}
