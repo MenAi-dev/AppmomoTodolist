@@ -47,10 +47,10 @@ function prochainJourDuMois(j){
 function analyserSaisie(texte){
   const orig = String(texte).normalize('NFC');
   let f = plierTexte(orig);
-  const rien = { titre:orig.trim(), date:'', important:false, repeter:'', cat:'', trouve:false };
+  const rien = { titre:orig.trim(), date:'', heure:'', important:false, repeter:'', cat:'', trouve:false };
   const P = '(^|[\\s,;(])', S = '(?=$|[\\s,;.!?)])';
   const plages = [];
-  let date = '', important = false, repeter = '', cat = '';
+  let date = '', important = false, repeter = '', cat = '', heure = '';
 
   const finDeTexte = fin => f.slice(fin).replace(/!+/g,'').trim() === '';
   // Cherche un motif ; calc(m) renvoie la date (ou '' pour refuser). Ne garde que la première date trouvée.
@@ -110,11 +110,25 @@ function analyserSaisie(texte){
   essayer('((?:(?:ce|le)\\s+)?(' + RE_JOUR + ')(?:\\s+prochain)?)', m => prochainJourSemaine(JOURS_SEMAINE[m[3]]));
   essayer('(le\\s+(\\d{1,2}))', (m, fin) => (finDeTexte(fin) || repeter === 'mois') ? prochainJourDuMois(Number(m[3])) : '');
 
+  // 2b. Heure : « à 15h », « 15h30 », « 9:05 » (pas « dans 2h »)
+  const mh = new RegExp(P + '((?:a\\s+)?(\\d{1,2})(?:h(\\d{2})?|:(\\d{2})))' + S).exec(f);
+  if(mh){
+    const h = Number(mh[3]), mi = Number(mh[4] || mh[5] || 0), debut = mh.index + mh[1].length;
+    if(h <= 23 && mi <= 59 && !/dans\s+$/.test(f.slice(0, debut))){
+      heure = pad(h) + ':' + pad(mi);
+      plages.push([debut, mh.index + mh[0].length]);
+    }
+  }
+
   // 3. Importance : « ! » en fin de texte
   const mi = /!+\s*$/.exec(f);
   if(mi && f.slice(0, mi.index).trim()){ plages.push([mi.index, f.length]); important = true; }
 
   if(!plages.length) return rien;
+  if(heure && !date){ // « à 15h » seul : aujourd'hui si l'heure n'est pas passée, sinon demain
+    const n = new Date();
+    date = heure > pad(n.getHours()) + ':' + pad(n.getMinutes()) ? auj() : ajouterJours(auj(), 1);
+  }
   if(repeter && !date) date = auj();
 
   // 4. Titre nettoyé
@@ -128,5 +142,5 @@ function analyserSaisie(texte){
   }
   if(!t) return rien;
   t = t.charAt(0).toUpperCase() + t.slice(1);
-  return { titre:t, date, important, repeter, cat, trouve:true };
+  return { titre:t, date, heure, important, repeter, cat, trouve:true };
 }

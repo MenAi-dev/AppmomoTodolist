@@ -1,6 +1,6 @@
 // Pense à changer ce numéro à chaque modification des fichiers,
 // sinon les anciens fichiers restent servis depuis le cache.
-const CACHE_NAME = 'mes-taches-cache-v14';
+const CACHE_NAME = 'mes-taches-cache-v15';
 const URLS_A_METTRE_EN_CACHE = [
   './',
   './index.html',
@@ -12,6 +12,7 @@ const URLS_A_METTRE_EN_CACHE = [
   './js/gestes.js',
   './js/theme.js',
   './js/storage.js',
+  './js/rappels.js',
   './js/render.js',
   './js/events.js',
   './js/app.js',
@@ -44,6 +45,17 @@ self.addEventListener('fetch', event => {
       return fetch(event.request).catch(() =>
         event.request.mode === 'navigate' ? caches.match('./index.html') : Response.error()
       );
+    })
+  );
+});
+
+// Toucher une notification de rappel : on ramène l'app au premier plan
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type:'window', includeUncontrolled:true }).then(liste => {
+      for(const c of liste){ if('focus' in c) return c.focus(); }
+      return self.clients.openWindow('./index.html');
     })
   );
 });

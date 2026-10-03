@@ -31,6 +31,8 @@
     </div>
   </header>
 
+  <div class="bandeau-rappels" id="bandeauRappels" hidden></div>
+
   <div class="resume">
     <div class="resume-haut">
       <div>
@@ -101,9 +103,15 @@
       <input id="editDate" type="date">
     </div>
     <div class="champ" id="champHeure">
-      <label for="editHeure">Rappel (heure, facultatif)</label>
-      <input id="editHeure" type="time">
-      <button class="btn-cal" id="editCalendrier" type="button" hidden>🔔 Ajouter le rappel au Calendrier</button>
+      <label for="editHeure">Rappel (facultatif)</label>
+      <div class="rappel-ligne">
+        <input id="editHeure" type="time" aria-label="Heure du rappel">
+        <div class="rappel-avance" id="blocAvance" hidden>
+          <input id="editAvance" type="number" inputmode="numeric" min="0" max="1440" aria-label="Minutes d'avance">
+          <span>min avant</span>
+        </div>
+      </div>
+      <div class="aide" id="aideRappel"></div>
     </div>
     <div class="champ">
       <label for="editImportant">Importance</label>
@@ -198,6 +206,7 @@
 <script src="js/helpers.js"></script>
 <script src="js/parser.js"></script>
 <script src="js/storage.js"></script>
+<script src="js/rappels.js"></script>
 <script src="js/render.js"></script>
 <script src="js/events.js"></script>
 <script src="js/gestes.js"></script>

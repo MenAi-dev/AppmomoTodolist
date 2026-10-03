@@ -95,6 +95,7 @@ function htmlGroupe(titre, liste, cls, actionHtml, termes){
 }
 
 function rendre(){
+  majRappels();
   const visibles = taches.filter(t=>!t.archive); // les tâches archivées ne comptent que dans l'analyse
   const restantes = visibles.filter(t=>!t.fait);
   const faites = visibles.filter(t=>t.fait);

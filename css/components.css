@@ -382,3 +382,19 @@
     color-scheme:var(--cs);
   }
   .objectif-stepper input::-webkit-outer-spin-button, .objectif-stepper input::-webkit-inner-spin-button{-webkit-appearance:none; margin:0;}
+
+
+  /* --- Bandeau des rappels --- */
+  .bandeau-rappels{display:flex; flex-direction:column; gap:8px; margin-bottom:14px;}
+  .rappel-item{
+    display:flex; align-items:center; gap:8px; padding:11px 12px 11px 14px; border-radius:var(--rayon-sm);
+    background:rgba(var(--accent-rgb),0.16); animation: apparition .35s ease both;
+  }
+  .rappel-txt{flex:1; min-width:0; display:flex; flex-direction:column; gap:2px;}
+  .rappel-txt b{font-size:0.9rem; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .rappel-txt span{font-size:0.76rem; color:var(--gris-2);}
+  .rappel-item button{
+    border:none; border-radius:980px; padding:7px 13px; font-size:0.78rem; font-weight:600; cursor:pointer;
+    background:var(--noir-3); color:var(--texte); flex-shrink:0;
+  }
+  .rappel-item button[data-r="fait"]{background:var(--bleu); color:var(--blanc);}

@@ -86,30 +86,3 @@ function noteVersHtml(texte){
     return `<a href="${lien}" target="_blank" rel="noopener noreferrer" data-act="lien">${lien}</a>${fin}`;
   });
 }
-
-// --- Rappel au format .ics (événement + alarme à l'heure dite) ---
-function icsTexte(s){ return String(s || '').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n'); }
-function icsPlier(ligne){ // lignes de 75 caractères max, suite = espace
-  const out = []; let l = ligne;
-  while(l.length > 74){ out.push(l.slice(0,74)); l = ' ' + l.slice(74); }
-  out.push(l); return out.join('\r\n');
-}
-function icsHorodatage(iso, hm, plusMin){
-  const [a, m, j] = iso.split('-').map(Number), [h, mi] = hm.split(':').map(Number);
-  const d = new Date(a, m-1, j, h, mi + (plusMin || 0));
-  return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
-}
-function icsTache(t){
-  const RR = { jour:'DAILY', semaine:'WEEKLY', mois:'MONTHLY' };
-  const stamp = new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d+/,'');
-  const lignes = [
-    'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Mes taches//FR','CALSCALE:GREGORIAN','BEGIN:VEVENT',
-    `UID:${t.id}-${Date.now()}@mes-taches`, `DTSTAMP:${stamp}`,
-    `DTSTART:${icsHorodatage(t.date, t.heure)}`, `DTEND:${icsHorodatage(t.date, t.heure, 15)}`,
-    `SUMMARY:${icsTexte(t.titre)}`
-  ];
-  if(t.note) lignes.push(`DESCRIPTION:${icsTexte(t.note)}`);
-  if(RR[t.repeter]) lignes.push(`RRULE:FREQ=${RR[t.repeter]}`);
-  lignes.push('BEGIN:VALARM','ACTION:DISPLAY',`DESCRIPTION:${icsTexte(t.titre)}`,'TRIGGER:PT0M','END:VALARM','END:VEVENT','END:VCALENDAR');
-  return lignes.map(icsPlier).join('\r\n') + '\r\n';
-}

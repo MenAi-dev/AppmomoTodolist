@@ -23,6 +23,8 @@ function nettoyerTache(t){
     fait: !!t.fait,
     important: !!t.important,
     date: dateValide(t.date) ? t.date : '',
+    avance: Number.isInteger(t.avance) && t.avance >= 0 && t.avance <= 1440 ? t.avance : null, // minutes d'avance (null = réglage par défaut)
+    notifie: !!t.notifie, vu: !!t.vu,
     heure: dateValide(t.date) && /^([01]\d|2[0-3]):[0-5]\d$/.test(t.heure) ? t.heure : '', // rappel (HH:MM), seulement avec une date
     repeter: REPETITIONS.includes(t.repeter) ? t.repeter : '',
     suiteId: typeof t.suiteId === 'string' ? t.suiteId : '',

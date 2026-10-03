@@ -36,6 +36,7 @@ function majApercu(){
   if(!a || !a.trouve){ zone.hidden = true; return; }
   const parts = [];
   if(a.date) parts.push(libelleDate(a.date));
+  if(a.heure) parts.push('🔔 ' + a.heure);
   if(a.important) parts.push('★ Important');
   if(a.repeter) parts.push('🔁 ' + LIBELLES_REPET[a.repeter]);
   if(a.cat) parts.push('🏷 ' + canoniqueCat(a.cat));
@@ -88,7 +89,8 @@ $('formAjout').addEventListener('submit', e=>{
   const cat = nouvelleCat || (detecte && auto.cat ? canoniqueCat(auto.cat) : '');
   let date = nouvelleDate || (detecte ? auto.date : '');
   if(repeter && !date) date = auj();
-  taches.push({ id:nouvelId(), titre, fait:false, important, date, repeter, cat, suiteId:'', sous:[], creeLe:Date.now(), faitLe:null });
+  const heure = (detecte && auto.heure && date) ? auto.heure : '';
+  taches.push({ id:nouvelId(), titre, fait:false, important, date, heure, avance:null, notifie:false, vu:false, repeter, cat, suiteId:'', sous:[], creeLe:Date.now(), faitLe:null });
   sauvegarder();
   $('inputTitre').value = '';
   reinitialiserOptions();
@@ -197,7 +199,7 @@ function basculerFait(t){
     let suivante = null;
     if(t.repeter){
       suivante = { id:nouvelId(), titre:t.titre, fait:false, important:t.important,
-        date:prochaineDate(t.date, t.repeter), heure:t.heure || '', repeter:t.repeter, suiteId:'', creeLe:Date.now(), faitLe:null,
+        date:prochaineDate(t.date, t.repeter), heure:t.heure || '', avance:t.avance, notifie:false, vu:false, repeter:t.repeter, suiteId:'', creeLe:Date.now(), faitLe:null,
         cat:t.cat || '', note:t.note || '', sous:(t.sous || []).map(s=>({ id:nouvelId(), titre:s.titre, fait:false })) }; // checklist remise à zéro
       taches.push(suivante);
       t.suiteId = suivante.id;
@@ -277,6 +279,7 @@ function ouvrirEdition(t){
   $('editTitre').value = t.titre;
   $('editDate').value = t.date;
   $('editHeure').value = t.heure || '';
+  $('editAvance').value = t.avance === null || t.avance === undefined ? avanceDefaut : t.avance;
   majChampHeure();
   $('editImportant').value = t.important ? '1' : '0';
   $('editRepeter').value = t.repeter || '';
@@ -292,44 +295,33 @@ function fermerEdition(){ $('overlayEdit').classList.remove('actif'); tacheEnEdi
 
 $('editAnnuler').addEventListener('click', fermerEdition);
 
-// --- Rappels : export vers le Calendrier (iPhone : seule voie fiable hors ligne, l'app fermée) ---
+// --- Rappels : champ heure + minutes d'avance ---
 function majChampHeure(){
   const date = $('editDate').value;
   $('editHeure').disabled = !date;
   if(!date) $('editHeure').value = '';
-  $('editCalendrier').hidden = !(date && $('editHeure').value);
+  $('blocAvance').hidden = !$('editHeure').value;
+  $('aideRappel').textContent = $('editHeure').value ? aideNotification() : '';
 }
 $('editDate').addEventListener('change', majChampHeure);
 $('editHeure').addEventListener('input', majChampHeure);
 
-$('editCalendrier').addEventListener('click', async ()=>{
-  const t = taches.find(x=>x.id === tacheEnEdition);
-  const titre = $('editTitre').value.trim();
-  if(!t || !titre) return;
-  const cible = { ...t, titre, date:$('editDate').value, heure:$('editHeure').value, repeter:$('editRepeter').value, note:$('editNote').value.trim() };
-  if(!cible.date || !cible.heure) return;
-  const fichier = new File([icsTache(cible)], 'rappel.ics', { type:'text/calendar' });
-  try{
-    if(navigator.canShare && navigator.canShare({ files:[fichier] })){
-      await navigator.share({ files:[fichier], title:titre });
-      return;
-    }
-  }catch(e){ if(e && e.name === 'AbortError') return; }
-  const url = URL.createObjectURL(fichier);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'rappel.ics';
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url), 1000);
-  toast('Ouvre le fichier pour l\'ajouter au Calendrier');
-});
 $('editValider').addEventListener('click', ()=>{
   const t = taches.find(x=>x.id === tacheEnEdition);
   const titre = $('editTitre').value.trim();
   if(!t) return fermerEdition();
   if(!titre){ toast('Le texte ne peut pas être vide', 'alerte'); return; }
   t.titre = titre;
+  const avantRappel = [t.date, t.heure, t.avance].join('|');
   t.date = $('editDate').value;
   t.heure = t.date ? $('editHeure').value : '';
+  if(t.heure){
+    const av = parseInt($('editAvance').value, 10);
+    t.avance = av >= 0 && av <= 1440 ? av : null;
+    if(t.avance !== null) enregistrerAvanceDefaut(t.avance); // sert de valeur proposée la prochaine fois
+    demanderNotifications();
+  } else t.avance = null;
+  if([t.date, t.heure, t.avance].join('|') !== avantRappel){ t.notifie = false; t.vu = false; }
   t.important = $('editImportant').value === '1';
   const nouvelle = $('editSousNouvelle').value.trim();
   if(nouvelle && sousEdition.length < MAX_SOUS) sousEdition.push({ id:nouvelId(), titre:nouvelle.slice(0,140), fait:false });
