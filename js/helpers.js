@@ -52,3 +52,64 @@ function prochaineDate(iso, repeter){
   while(n <= t) n = avancer(n);
   return n;
 }
+
+// --- Catégories (simples étiquettes de texte, créées à la volée) ---
+const COULEURS_CAT = ['#0A84FF','#30D158','#FF9F0A','#BF5AF2','#FF453A','#64D2FF','#FFD60A','#FF6482'];
+const cleCat = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+const memeCat = (t, nom) => !!t.cat && cleCat(t.cat) === cleCat(nom);
+
+function couleurCat(nom){
+  let h = 0;
+  for(const c of cleCat(nom)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return COULEURS_CAT[h % COULEURS_CAT.length];
+}
+// Noms de catégories uniques (sans tenir compte des accents/majuscules), triés
+function toutesCategories(liste){
+  const m = new Map();
+  (liste || taches).forEach(t=>{ if(t.cat && !m.has(cleCat(t.cat))) m.set(cleCat(t.cat), t.cat); });
+  return [...m.values()].sort((a, b) => a.localeCompare(b, 'fr'));
+}
+// Réutilise l'écriture d'une catégorie existante ; sinon met la première lettre en majuscule
+function canoniqueCat(nom){
+  nom = String(nom || '').replace(/_/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 24).trim();
+  if(!nom) return '';
+  const existante = toutesCategories().find(c => cleCat(c) === cleCat(nom));
+  return existante || nom.charAt(0).toUpperCase() + nom.slice(1);
+}
+
+// Texte de note -> HTML sûr, avec les adresses http(s) transformées en liens
+function noteVersHtml(texte){
+  const safe = echapper(texte);
+  return safe.replace(/https?:\/\/(?:(?!&quot;|&#39;|&lt;|&gt;)\S)+/g, url => {
+    const fin = (url.match(/[.,;:!?)\]]+$/) || [''])[0];
+    const lien = url.slice(0, url.length - fin.length);
+    return `<a href="${lien}" target="_blank" rel="noopener noreferrer" data-act="lien">${lien}</a>${fin}`;
+  });
+}
+
+// --- Rappel au format .ics (événement + alarme à l'heure dite) ---
+function icsTexte(s){ return String(s || '').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n'); }
+function icsPlier(ligne){ // lignes de 75 caractères max, suite = espace
+  const out = []; let l = ligne;
+  while(l.length > 74){ out.push(l.slice(0,74)); l = ' ' + l.slice(74); }
+  out.push(l); return out.join('\r\n');
+}
+function icsHorodatage(iso, hm, plusMin){
+  const [a, m, j] = iso.split('-').map(Number), [h, mi] = hm.split(':').map(Number);
+  const d = new Date(a, m-1, j, h, mi + (plusMin || 0));
+  return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
+}
+function icsTache(t){
+  const RR = { jour:'DAILY', semaine:'WEEKLY', mois:'MONTHLY' };
+  const stamp = new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d+/,'');
+  const lignes = [
+    'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Mes taches//FR','CALSCALE:GREGORIAN','BEGIN:VEVENT',
+    `UID:${t.id}-${Date.now()}@mes-taches`, `DTSTAMP:${stamp}`,
+    `DTSTART:${icsHorodatage(t.date, t.heure)}`, `DTEND:${icsHorodatage(t.date, t.heure, 15)}`,
+    `SUMMARY:${icsTexte(t.titre)}`
+  ];
+  if(t.note) lignes.push(`DESCRIPTION:${icsTexte(t.note)}`);
+  if(RR[t.repeter]) lignes.push(`RRULE:FREQ=${RR[t.repeter]}`);
+  lignes.push('BEGIN:VALARM','ACTION:DISPLAY',`DESCRIPTION:${icsTexte(t.titre)}`,'TRIGGER:PT0M','END:VALARM','END:VEVENT','END:VCALENDAR');
+  return lignes.map(icsPlier).join('\r\n') + '\r\n';
+}

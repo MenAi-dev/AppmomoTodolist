@@ -1,5 +1,5 @@
   .overlay{
-    position:fixed; inset:0; background:rgba(0,0,0,0.4);
+    position:fixed; inset:0; background:var(--fond-modal);
     -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
     display:none; align-items:flex-end; justify-content:center; z-index:50;
   }
@@ -23,12 +23,12 @@
   .modal .sub{color:var(--gris); font-size:0.8rem; margin-bottom:18px; line-height:1.45;}
   .champ{margin-bottom:14px;}
   .champ label{display:block; font-size:0.78rem; color:var(--gris); margin-bottom:6px;}
-  .champ input, .champ select{
-    width:100%; background:var(--noir-3); border:none; color:var(--blanc);
+  .champ input, .champ select, .champ textarea{
+    width:100%; background:var(--noir-3); border:none; color:var(--texte);
     padding:12px 14px; border-radius:var(--rayon-sm); font-size:0.95rem;
-    color-scheme:dark;
+    color-scheme:var(--cs);
   }
-  .champ input:focus, .champ select:focus{outline:2px solid var(--bleu); outline-offset:1px;}
+  .champ input:focus, .champ select:focus, .champ textarea:focus{outline:2px solid var(--bleu); outline-offset:1px;}
   .modal-actions{display:flex; gap:10px; margin-top:20px;}
   .modal-actions.col{flex-direction:column;}
   .modal-actions button{
@@ -36,7 +36,7 @@
     transition:transform .15s var(--spring), background .15s ease;
   }
   .modal-actions button:active{transform:scale(.97);}
-  .btn-annuler{background:var(--noir-3); color:var(--blanc);}
+  .btn-annuler{background:var(--noir-3); color:var(--texte);}
   .btn-valider{background:var(--bleu); color:var(--blanc);}
   .btn-valider:hover{background:var(--bleu-clair);}
   .modal-delete-link{margin-top:16px; text-align:center;}
@@ -56,3 +56,11 @@
     content:''; width:5px; height:10px; border:solid var(--blanc); border-width:0 2px 2px 0;
     transform:rotate(45deg) translate(-1px,-1px);
   }
+
+  .champ textarea{resize:none; min-height:84px; line-height:1.4; font-family:inherit;}
+
+  .btn-cal{
+    width:100%; margin-top:8px; padding:11px 0; border:none; border-radius:var(--rayon-sm);
+    background:rgba(var(--accent-rgb),0.15); color:var(--bleu-clair); font-size:0.85rem; font-weight:600; cursor:pointer;
+  }
+  .champ input:disabled{opacity:.45;}

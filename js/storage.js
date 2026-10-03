@@ -1,6 +1,10 @@
 const CLE_STOCKAGE = 'todoData';
+const MAX_NOTE = 1000; // longueur max d'une note
 const MAX_SOUS = 30; // sous-tâches max par tâche
-let taches = []; // { id, titre, fait, important, date, repeter, suiteId, archive, sous:[{id,titre,fait}], creeLe, faitLe }
+const CLE_OBJECTIF = 'todoObjectif';
+const MAX_OBJECTIF = 50;
+let objectif = 0; // tâches à terminer par jour (0 = pas d'objectif)
+let taches = []; // { id, titre, fait, heure, important, date, repeter, suiteId, archive, cat, note, sous:[{id,titre,fait}], creeLe, faitLe }
 
 function nettoyerSous(liste){
   if(!Array.isArray(liste)) return [];
@@ -19,16 +23,34 @@ function nettoyerTache(t){
     fait: !!t.fait,
     important: !!t.important,
     date: dateValide(t.date) ? t.date : '',
+    heure: dateValide(t.date) && /^([01]\d|2[0-3]):[0-5]\d$/.test(t.heure) ? t.heure : '', // rappel (HH:MM), seulement avec une date
     repeter: REPETITIONS.includes(t.repeter) ? t.repeter : '',
     suiteId: typeof t.suiteId === 'string' ? t.suiteId : '',
     archive: !!t.archive && !!t.fait, // seules les tâches terminées s'archivent
     sous: nettoyerSous(t.sous),
+    note: typeof t.note === 'string' ? t.note.replace(/\r\n?/g, '\n').trim().slice(0, MAX_NOTE) : '',
+    cat: typeof t.cat === 'string' ? t.cat.replace(/\s+/g, ' ').trim().slice(0,24) : '',
     creeLe: typeof t.creeLe === 'number' ? t.creeLe : Date.now(),
     faitLe: typeof t.faitLe === 'number' ? t.faitLe : null
   };
 }
 
+function nettoyerObjectif(n){
+  n = Math.round(Number(n));
+  return n >= 1 ? Math.min(n, MAX_OBJECTIF) : 0;
+}
+function chargerObjectif(){
+  try{ objectif = nettoyerObjectif(localStorage.getItem(CLE_OBJECTIF)); }catch(_){ objectif = 0; }
+}
+function enregistrerObjectif(n){
+  objectif = nettoyerObjectif(n);
+  try{
+    if(objectif) localStorage.setItem(CLE_OBJECTIF, String(objectif)); else localStorage.removeItem(CLE_OBJECTIF);
+  }catch(_){ toast("Impossible d'enregistrer l'objectif", 'danger'); }
+}
+
 function charger(){
+  chargerObjectif();
   try{
     const brut = localStorage.getItem(CLE_STOCKAGE);
     if(brut){
@@ -52,7 +74,7 @@ function sauvegarder(){
 
 // --- Export / import ---
 function exporter(){
-  const blob = new Blob([JSON.stringify({ app:'mes-taches', exporteLe:new Date().toISOString(), taches }, null, 2)], { type:'application/json' });
+  const blob = new Blob([JSON.stringify({ app:'mes-taches', exporteLe:new Date().toISOString(), objectif, taches }, null, 2)], { type:'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = `taches-${auj()}.json`;
@@ -72,6 +94,7 @@ function importer(fichier){
       const nActuelles = taches.filter(t=>!t.archive).length, nImportees = propres.filter(t=>!t.archive).length;
       if(!confirm(`Remplacer tes ${nActuelles} tâche(s) actuelle(s) par les ${nImportees} de cette sauvegarde ?`)) return;
       taches = propres;
+      if(!Array.isArray(data) && data.objectif !== undefined) enregistrerObjectif(data.objectif);
       sauvegarder(); rendre(); fermerDonnees();
       toast(`${nImportees} tâche(s) importée(s)`);
     }catch(e){

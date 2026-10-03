@@ -46,11 +46,11 @@ function prochainJourDuMois(j){
 
 function analyserSaisie(texte){
   const orig = String(texte).normalize('NFC');
-  const f = plierTexte(orig);
-  const rien = { titre:orig.trim(), date:'', important:false, repeter:'', trouve:false };
+  let f = plierTexte(orig);
+  const rien = { titre:orig.trim(), date:'', important:false, repeter:'', cat:'', trouve:false };
   const P = '(^|[\\s,;(])', S = '(?=$|[\\s,;.!?)])';
   const plages = [];
-  let date = '', important = false, repeter = '';
+  let date = '', important = false, repeter = '', cat = '';
 
   const finDeTexte = fin => f.slice(fin).replace(/!+/g,'').trim() === '';
   // Cherche un motif ; calc(m) renvoie la date (ou '' pour refuser). Ne garde que la première date trouvée.
@@ -68,6 +68,15 @@ function analyserSaisie(texte){
     if(m) plages.push([m.index + m[1].length, m.index + m[0].length]);
     return m;
   };
+
+  // 0. Catégorie : #travail (le texte masqué ne gêne plus les autres détections)
+  const mc = /(^|[\s,;(])#([\p{L}\p{N}_-]{2,24})(?=$|[\s,;.!?)])/u.exec(orig);
+  if(mc && /\p{L}/u.test(mc[2])){
+    const d = mc.index + mc[1].length, e = mc.index + mc[0].length;
+    cat = mc[2];
+    plages.push([d, e]);
+    f = f.slice(0, d) + ' '.repeat(e - d) + f.slice(e);
+  }
 
   // 1. Répétition
   let m = retirer('(?:tous les|toutes les|chaque)\\s+(jours?|semaines?|mois|(' + RE_JOUR + ')s?)');
@@ -119,5 +128,5 @@ function analyserSaisie(texte){
   }
   if(!t) return rien;
   t = t.charAt(0).toUpperCase() + t.slice(1);
-  return { titre:t, date, important, repeter, trouve:true };
+  return { titre:t, date, important, repeter, cat, trouve:true };
 }
