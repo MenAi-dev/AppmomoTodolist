@@ -1,6 +1,6 @@
 // Pense à changer ce numéro à chaque modification des fichiers,
 // sinon les anciens fichiers restent servis depuis le cache.
-const CACHE_NAME = 'mes-taches-cache-v7';
+const CACHE_NAME = 'mes-taches-cache-v13';
 const URLS_A_METTRE_EN_CACHE = [
   './',
   './index.html',
@@ -9,6 +9,8 @@ const URLS_A_METTRE_EN_CACHE = [
   './css/modals.css',
   './js/helpers.js',
   './js/parser.js',
+  './js/gestes.js',
+  './js/theme.js',
   './js/storage.js',
   './js/render.js',
   './js/events.js',

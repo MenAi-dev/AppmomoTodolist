@@ -6,6 +6,7 @@
 <title>Mes tâches</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#000000">
+<script>(function(){try{var t=JSON.parse(localStorage.getItem("todoTheme")||"{}"),r=document.documentElement,m=t.mode||"sombre";r.dataset.theme=(m==="clair"||(m==="auto"&&matchMedia("(prefers-color-scheme: light)").matches))?"clair":"sombre";r.dataset.accent=t.accent||"bleu";}catch(e){}})();</script>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -25,6 +26,7 @@
       <p id="dateJour"></p>
     </div>
     <div class="header-actions">
+      <button class="cat-btn" id="btnTheme" type="button" aria-label="Apparence">Thème</button>
       <button class="cat-btn" id="btnDonnees" type="button">Sauvegarde</button>
     </div>
   </header>
@@ -45,7 +47,7 @@
 
   <form class="ajout" id="formAjout" autocomplete="off">
     <div class="ajout-ligne">
-      <input id="inputTitre" type="text" placeholder="Nouvelle tâche… ex. Appeler Paul demain !" maxlength="140" enterkeyhint="done" aria-label="Nouvelle tâche">
+      <input id="inputTitre" type="text" placeholder="Nouvelle tâche… ex. Appeler Paul demain #perso" maxlength="140" enterkeyhint="done" aria-label="Nouvelle tâche">
       <button type="submit" class="btn-plus" aria-label="Ajouter la tâche">+</button>
     </div>
     <div class="ajout-options">
@@ -56,15 +58,29 @@
       <button type="button" class="chip chip-x" id="effacerDate" hidden aria-label="Retirer la date">✕</button>
       <button type="button" class="chip" id="chipImportant">☆ Important</button>
       <button type="button" class="chip" id="chipRepeter">🔁 Répéter</button>
+      <button type="button" class="chip" id="chipCat">🏷 Catégorie</button>
     </div>
     <div class="apercu" id="apercu" hidden></div>
   </form>
 
+  <div class="zone-nav" id="zoneNav">
+  <div class="zone-nav-ligne">
   <nav class="nav" id="nav">
     <button class="nav-btn actif" data-filtre="afaire" type="button"><span class="nav-fond"></span>À faire <span class="nav-n" id="navAFaire">0</span></button>
     <button class="nav-btn" data-filtre="faites" type="button"><span class="nav-fond"></span>Terminées <span class="nav-n" id="navFaites">0</span></button>
     <button class="nav-btn" data-filtre="analyse" type="button"><span class="nav-fond"></span>Analyse</button>
   </nav>
+  <button class="btn-recherche" id="btnRecherche" type="button" aria-label="Rechercher une tâche">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+  </button>
+  </div>
+  <div class="zone-recherche" id="zoneRecherche" hidden>
+    <input type="search" id="inputRecherche" placeholder="Rechercher (titre, étape, catégorie)…" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <button type="button" id="rechercheFermer" aria-label="Fermer la recherche">✕</button>
+  </div>
+  </div>
+
+  <div class="filtres-cat" id="filtresCat" hidden></div>
 
   <div id="liste"></div>
 
@@ -75,7 +91,7 @@
 <div class="overlay" id="overlayEdit">
   <div class="modal"><div class="sheet-grabber"></div>
     <h3>Modifier la tâche</h3>
-    <div class="sub">Change le texte, la date, l'importance, la répétition ou les sous-tâches.</div>
+    <div class="sub">Change le texte, la date, l'importance, la répétition, la catégorie, les sous-tâches ou la note.</div>
     <div class="champ">
       <label for="editTitre">Tâche</label>
       <input id="editTitre" type="text" maxlength="140">
@@ -101,15 +117,59 @@
       </select>
     </div>
     <div class="champ">
+      <label for="editCat">Catégorie</label>
+      <input id="editCat" type="text" list="listeCats" maxlength="24" placeholder="Aucune" autocomplete="off">
+      <datalist id="listeCats"></datalist>
+    </div>
+    <div class="champ">
       <label for="editSousNouvelle">Sous-tâches</label>
       <div class="sous-liste" id="editSous"></div>
       <input id="editSousNouvelle" type="text" maxlength="140" placeholder="Ajouter une sous-tâche…" enterkeyhint="done" autocomplete="off">
+    </div>
+    <div class="champ">
+      <label for="editNote">Note</label>
+      <textarea id="editNote" rows="3" maxlength="1000" placeholder="Détails, adresse, lien…"></textarea>
     </div>
     <div class="modal-actions">
       <button class="btn-annuler" id="editAnnuler" type="button">Annuler</button>
       <button class="btn-valider" id="editValider" type="button">Enregistrer</button>
     </div>
     <div class="modal-delete-link"><button id="editSuppr" type="button">Supprimer cette tâche</button></div>
+  </div>
+</div>
+
+<!-- Apparence -->
+<div class="overlay" id="overlayTheme">
+  <div class="modal"><div class="sheet-grabber"></div>
+    <h3>Apparence</h3>
+    <div class="sub">Choisis le thème et la couleur de l'app. Ce réglage reste sur cet appareil.</div>
+    <div class="theme-titre">Thème</div>
+    <div class="theme-modes" role="group" aria-label="Thème">
+      <button class="theme-mode" data-mode="auto" type="button">Auto</button>
+      <button class="theme-mode" data-mode="clair" type="button">Clair</button>
+      <button class="theme-mode" data-mode="sombre" type="button">Sombre</button>
+    </div>
+    <div class="theme-titre">Couleur d'accent</div>
+    <div class="theme-accents" id="themeAccents" role="group" aria-label="Couleur d'accent"></div>
+    <div class="modal-actions"><button class="btn-valider" id="themeFermer" type="button">Terminé</button></div>
+  </div>
+</div>
+
+<!-- Objectif quotidien -->
+<div class="overlay" id="overlayObjectif">
+  <div class="modal"><div class="sheet-grabber"></div>
+    <h3>Objectif quotidien</h3>
+    <div class="sub">Nombre de tâches que tu veux terminer chaque jour. Il sert à colorer la carte de chaleur et à suivre ta progression.</div>
+    <div class="objectif-stepper">
+      <button type="button" id="objMoins" aria-label="Diminuer">−</button>
+      <input id="objValeur" type="number" inputmode="numeric" min="1" max="50" aria-label="Tâches par jour">
+      <button type="button" id="objPlus" aria-label="Augmenter">+</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-annuler" id="objAnnuler" type="button">Annuler</button>
+      <button class="btn-valider" id="objValider" type="button">Enregistrer</button>
+    </div>
+    <div class="modal-delete-link"><button id="objRetirer" type="button">Retirer l'objectif</button></div>
   </div>
 </div>
 
@@ -135,6 +195,8 @@
 <script src="js/storage.js"></script>
 <script src="js/render.js"></script>
 <script src="js/events.js"></script>
+<script src="js/gestes.js"></script>
+<script src="js/theme.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
