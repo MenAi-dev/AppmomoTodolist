@@ -1,4 +1,4 @@
-const CLE_STOCKAGE = 'todoData';
+﻿const CLE_STOCKAGE = 'todoData';
 const MAX_NOTE = 1000; // longueur max d'une note
 const MAX_SOUS = 30; // sous-tâches max par tâche
 const CLE_OBJECTIF = 'todoObjectif';
@@ -29,6 +29,7 @@ function nettoyerTache(t){
     repeter: REPETITIONS.includes(t.repeter) ? t.repeter : '',
     suiteId: typeof t.suiteId === 'string' ? t.suiteId : '',
     archive: !!t.archive && !!t.fait, // seules les tâches terminées s'archivent
+    stock: !!t.stock && !t.fait, // tâche rangée au stock (hors « À faire » et rappels)
     sous: nettoyerSous(t.sous),
     note: typeof t.note === 'string' ? t.note.replace(/\r\n?/g, '\n').trim().slice(0, MAX_NOTE) : '',
     cat: typeof t.cat === 'string' ? t.cat.replace(/\s+/g, ' ').trim().slice(0,24) : '',
@@ -75,32 +76,48 @@ function sauvegarder(){
 }
 
 // --- Export / import ---
-function exporter(){
-  const blob = new Blob([JSON.stringify({ app:'mes-taches', exporteLe:new Date().toISOString(), objectif, taches }, null, 2)], { type:'application/json' });
+// mdp (facultatif) : sauvegarde chiffrée (voir securite.js)
+async function exporter(mdp){
+  let contenu = JSON.stringify({ app:'mes-taches', exporteLe:new Date().toISOString(), objectif, prefs:reglagesTheme, taches }, null, 2);
+  if(mdp){
+    try{ contenu = JSON.stringify(await chiffrerTexte(contenu, mdp)); }
+    catch(e){ toast('Le chiffrement a échoué', 'danger'); return; }
+  }
+  const blob = new Blob([contenu], { type:'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = `taches-${auj()}.json`;
+  a.href = url; a.download = `taches-${auj()}${mdp ? '-chiffre' : ''}.json`;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(url), 1000);
-  toast('Sauvegarde exportée');
+  toast(mdp ? 'Sauvegarde chiffrée exportée' : 'Sauvegarde exportée', 'succes');
 }
 
 function importer(fichier){
   const lecteur = new FileReader();
-  lecteur.onload = () => {
+  lecteur.onload = async () => {
     try{
-      const data = JSON.parse(lecteur.result);
+      let data = JSON.parse(lecteur.result);
+      if(data && data.chiffre){ // sauvegarde chiffrée : on demande le mot de passe
+        if(!cryptoDispo()) throw new Error("Le déchiffrement n'est pas disponible ici (il faut une connexion sécurisée, en https).");
+        const mdp = await demanderSecret({ titre:'Sauvegarde chiffrée', sub:'Entre le mot de passe choisi lors de la sauvegarde.', label:'Mot de passe' });
+        if(mdp == null) return;
+        data = JSON.parse(await dechiffrerPaquet(data, mdp));
+      }
       const liste = (Array.isArray(data) ? data : data.taches);
-      if(!Array.isArray(liste)) throw new Error('format');
+      if(!Array.isArray(liste)) throw new Error('Fichier invalide');
       const propres = liste.map(nettoyerTache).filter(Boolean);
       const nActuelles = taches.filter(t=>!t.archive).length, nImportees = propres.filter(t=>!t.archive).length;
-      if(!confirm(`Remplacer tes ${nActuelles} tâche(s) actuelle(s) par les ${nImportees} de cette sauvegarde ?`)) return;
+      if(!confirm(`Remplacer tes ${nActuelles} tâche(s) actuelle(s) par les ${nImportees} de cette sauvegarde ?\n\nTu pourras revenir en arrière depuis les Réglages.`)) return;
+      try{ localStorage.setItem(CLE_AVANT_IMPORT, JSON.stringify({ taches })); }catch(_){} // filet de sécurité
       taches = propres;
-      if(!Array.isArray(data) && data.objectif !== undefined) enregistrerObjectif(data.objectif);
-      sauvegarder(); rendre(); fermerDonnees();
-      toast(`${nImportees} tâche(s) importée(s)`);
+      if(!Array.isArray(data)){
+        if(data.objectif !== undefined) enregistrerObjectif(data.objectif);
+        if(data.prefs){ Object.assign(reglagesTheme, nettoyerReglages(data.prefs)); enregistrerTheme(); appliquerTheme(); }
+      }
+      sauvegarder(); rendre(); fermerReglages(); majZoneSecours();
+      toast(`${nImportees} tâche(s) importée(s)`, 'succes');
     }catch(e){
-      toast('Fichier invalide', 'danger');
+      toast(e instanceof SyntaxError ? 'Fichier invalide' : (e.message || 'Fichier invalide'), 'danger');
     }
   };
   lecteur.readAsText(fichier);

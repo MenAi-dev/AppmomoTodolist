@@ -8,6 +8,8 @@ let tacheEnEdition = null;
 
 // --- Ajout rapide ---
 function majOptionsAjout(){
+  // Les puces d'options restent cachées tant qu'on n'écrit pas, sauf si l'une d'elles est déjà choisie
+  $('formAjout').classList.toggle('avec-options', !!(nouvelleDate || nouvelImportant || nouvelleRepet || nouvelleCat));
   $('chipDate').classList.toggle('actif', !!nouvelleDate);
   $('chipDateTxt').textContent = nouvelleDate ? '📅 ' + libelleDate(nouvelleDate) : '📅 Date';
   $('effacerDate').hidden = !nouvelleDate;
@@ -76,27 +78,51 @@ $('chipRepeter').addEventListener('click', ()=>{
   majOptionsAjout();
 });
 
-$('formAjout').addEventListener('submit', e=>{
-  e.preventDefault();
-  const saisie = $('inputTitre').value.trim();
-  if(!saisie){ $('inputTitre').focus(); return; }
+// --- Ajout d'une tâche : la fiche complète s'ouvre, préremplie avec ce qui a été saisi ou détecté ---
+let brouillonTache = null; // tâche en cours de création (pas encore enregistrée)
+
+// Construit la tâche à partir de la saisie (texte + puces + détection automatique). saisie vide = fiche vierge.
+function construireBrouillon(saisie){
   // Les puces choisies à la main passent avant ce qui est détecté dans le texte
-  const auto = ignorerAuto ? null : analyserSaisie(saisie);
+  const auto = (saisie && !ignorerAuto) ? analyserSaisie(saisie) : null;
   const detecte = !!(auto && auto.trouve);
-  const titre = detecte ? auto.titre : saisie;
-  const important = nouvelImportant || (detecte && auto.important);
-  const repeter = nouvelleRepet || (detecte ? auto.repeter : '');
-  const cat = nouvelleCat || (detecte && auto.cat ? canoniqueCat(auto.cat) : '');
   let date = nouvelleDate || (detecte ? auto.date : '');
-  if(repeter && !date) date = auj();
-  const heure = (detecte && auto.heure && date) ? auto.heure : '';
-  taches.push({ id:nouvelId(), titre, fait:false, important, date, heure, avance:null, notifie:false, vu:false, repeter, cat, suiteId:'', sous:[], creeLe:Date.now(), faitLe:null });
+  if(!date) date = auj(); // sans date précisée, la tâche est pour aujourd'hui (sinon elle partirait au stock, hors de vue)
+  return { id:nouvelId(), titre:detecte ? auto.titre : saisie, fait:false, important:nouvelImportant || (detecte && auto.important), date,
+    heure:(detecte && auto.heure) ? auto.heure : '', avance:null, notifie:false, vu:false,
+    repeter:nouvelleRepet || (detecte ? auto.repeter : ''), cat:nouvelleCat || (detecte && auto.cat ? canoniqueCat(auto.cat) : ''),
+    suiteId:'', sous:[], note:'', creeLe:Date.now(), faitLe:null };
+}
+
+// Enregistre la tâche et remet la saisie rapide à zéro
+function enregistrerNouvelle(brut){
+  const t = nettoyerTache(brut);
+  if(!t) return;
+  taches.push(t);
+  noter('ajout', t.titre, t.date ? libelleDate(t.date) : '');
+  // la nouvelle tâche doit rester visible : on rouvre les groupes repliés et le jour concerné
+  groupesReplies.clear();
+  if(t.date > auj()) groupesOuverts.add('j-' + t.date);
+  sauverGroupes();
   sauvegarder();
   $('inputTitre').value = '';
   reinitialiserOptions();
-  if(requete) fermerRecherche(); // la nouvelle tâche doit rester visible
-  if(filtre !== 'afaire') basculerFiltre('afaire'); else rendre();
-  $('inputTitre').focus(); // garde le clavier ouvert pour enchaîner
+  if(requete) fermerRecherche();
+  if(t.date > auj()){ // datée après aujourd'hui : elle part au stock, et revient seule le jour venu
+    if(filtre !== 'afaire') basculerFiltre('afaire'); else rendre();
+    toast(`Ajoutée au stock (${libelleDate(t.date)}) · elle apparaîtra ici ce jour-là`, '', { label:'Voir', fn:()=>basculerFiltre('stock') });
+  } else {
+    vibrer(10);
+    if(filtre !== 'afaire') basculerFiltre('afaire'); else rendre();
+    toast('Tâche ajoutée', 'succes');
+  }
+}
+
+$('formAjout').addEventListener('submit', e=>{
+  e.preventDefault();
+  const brouillon = construireBrouillon($('inputTitre').value.trim());
+  if(reglagesTheme.ajoutRapide && brouillon.titre){ enregistrerNouvelle(brouillon); $('inputTitre').focus(); } // option « Ajout rapide »
+  else ouvrirEdition(brouillon, true);
 });
 
 // --- Recherche ---
@@ -135,8 +161,9 @@ $('liste').addEventListener('click', e=>{
     const aArchiver = taches.filter(t=>t.fait && !t.archive && (!filtreCat || memeCat(t, filtreCat)));
     if(!aArchiver.length) return;
     aArchiver.forEach(t=>{ t.archive = true; });
-    sauvegarder(); rendre();
     const n = aArchiver.length;
+    noter('archive', `${n} tâche${n>1?'s':''} terminée${n>1?'s':''}`);
+    sauvegarder(); rendre();
     toast(`${n} tâche${n>1?'s':''} archivée${n>1?'s':''} · stats conservées`, '',
       { label:'Annuler', fn:()=>{ aArchiver.forEach(t=>{ t.archive = false; }); sauvegarder(); rendre(); } });
     return;
@@ -144,11 +171,32 @@ $('liste').addEventListener('click', e=>{
 
   if(act === 'reporter-tout'){
     const aujourdhui = auj();
-    reporterTaches(taches.filter(t=>!t.fait && t.date && t.date < aujourdhui && (!filtreCat || memeCat(t, filtreCat))), 0);
+    reporterTaches(taches.filter(t=>!t.fait && !t.stock && !t.archive && t.date && t.date < aujourdhui && (!filtreCat || memeCat(t, filtreCat))), 0);
     return;
   }
 
   if(act === 'objectif'){ ouvrirObjectif(); return; }
+  if(act === 'vider-journal'){
+    if(!journal.length || !confirm('Effacer tout le journal ? Tes tâches ne sont pas touchées.')) return;
+    viderJournal(); rendre(); toast('Journal effacé');
+    return;
+  }
+  if(act === 'stock-tout'){
+    remettreDuStock(taches.filter(t=>t.stock && !t.fait && !t.archive && (!filtreCat || memeCat(t, filtreCat))));
+    return;
+  }
+  if(act === 'rec-edit' || act === 'rec-stop' || act === 'rec-stock' || act === 'stock-edit' || act === 'stock-remettre'){
+    const rt = taches.find(x=>x.id === el.closest('.rec-ligne').dataset.id);
+    if(!rt) return;
+    if(act === 'rec-edit' || act === 'stock-edit'){ ouvrirEdition(rt); return; }
+    if(act === 'rec-stock'){ mettreEnStock(rt); return; }
+    if(act === 'stock-remettre'){ remettreDuStock([rt]); return; }
+    const ancienne = rt.repeter;
+    rt.repeter = '';
+    sauvegarder(); rendre();
+    toast('Répétition arrêtée', '', { label:'Annuler', fn:()=>{ rt.repeter = ancienne; sauvegarder(); rendre(); } });
+    return;
+  }
   if(act === 'jour'){
     const n = Number(el.dataset.n) || 0;
     toast(`${el.dataset.lbl} : ${n} tâche${n>1?'s':''} terminée${n>1?'s':''}`);
@@ -204,8 +252,10 @@ function basculerFait(t){
       taches.push(suivante);
       t.suiteId = suivante.id;
     }
+    noter('fait', t.titre);
+    vibrer(10);
     sauvegarder(); rendre();
-    if(objectif && !suivante && compteAujourdhui() === objectif) toast('Objectif du jour atteint 🎯');
+    if(objectif && !suivante && compteAujourdhui() === objectif) toast('Objectif du jour atteint 🎯', 'succes');
     if(suivante){
       toast(`Prochaine occurrence : ${libelleDate(suivante.date).toLowerCase()}`, '',
         { label:'Annuler', fn:()=>{ if(t.fait) basculerFait(t); } });
@@ -217,6 +267,7 @@ function basculerFait(t){
       if(i >= 0) taches.splice(i,1);
       t.suiteId = '';
     }
+    noter('rouvert', t.titre);
     sauvegarder(); rendre();
   }
 }
@@ -252,8 +303,9 @@ function reporterTaches(liste, jours){
   const cible = ajouterJours(auj(), jours);
   const avant = liste.map(t=>({ t, date:t.date }));
   liste.forEach(t=>{ t.date = cible; });
-  sauvegarder(); rendre();
   const n = liste.length;
+  noter('report', n > 1 ? `${n} tâches` : liste[0].titre, libelleDate(cible));
+  sauvegarder(); rendre();
   toast(`${n>1 ? n + ' tâches reportées' : 'Tâche reportée'} pour ${libelleDate(cible).toLowerCase()}`, '',
     { label:'Annuler', fn:()=>{ avant.forEach(a=>{ a.t.date = a.date; }); sauvegarder(); rendre(); } });
 }
@@ -261,6 +313,7 @@ function reporterTaches(liste, jours){
 function supprimerTache(id){
   const i = taches.findIndex(x=>x.id === id);
   if(i < 0) return;
+  noter('suppr', taches[i].titre);
   if(taches[i].fait){ // une tâche terminée est archivée : elle reste dans l'analyse
     const t = taches[i];
     t.archive = true;
@@ -274,13 +327,20 @@ function supprimerTache(id){
 }
 
 // --- Modifier une tâche ---
-function ouvrirEdition(t){
+function ouvrirEdition(t, creation){
   tacheEnEdition = t.id;
+  brouillonTache = creation ? t : null;
+  // La même fiche sert à créer et à modifier
+  $('editEntete').textContent = creation ? 'Nouvelle tâche' : 'Modifier la tâche';
+  $('editSub').textContent = creation ? "Remplis ce que tu veux : tout est facultatif sauf le texte." : "Change le texte, la date, l'importance, la répétition, la catégorie, les sous-tâches ou la note.";
+  $('editValider').textContent = creation ? 'Ajouter' : 'Enregistrer';
+  $('editSecondaire').hidden = !!creation;
   $('editTitre').value = t.titre;
   $('editDate').value = t.date;
   $('editHeure').value = t.heure || '';
   $('editAvance').value = t.avance === null || t.avance === undefined ? avanceDefaut : t.avance;
   majChampHeure();
+  $('editStock').textContent = t.stock ? 'Remettre à faire' : 'Mettre en stock';
   $('editImportant').value = t.important ? '1' : '0';
   $('editRepeter').value = t.repeter || '';
   $('editCat').value = t.cat || '';
@@ -291,7 +351,7 @@ function ouvrirEdition(t){
   $('editSousNouvelle').value = '';
   $('overlayEdit').classList.add('actif');
 }
-function fermerEdition(){ $('overlayEdit').classList.remove('actif'); tacheEnEdition = null; }
+function fermerEdition(){ $('overlayEdit').classList.remove('actif'); tacheEnEdition = null; brouillonTache = null; } // annuler garde le texte saisi
 
 $('editAnnuler').addEventListener('click', fermerEdition);
 
@@ -307,7 +367,7 @@ $('editDate').addEventListener('change', majChampHeure);
 $('editHeure').addEventListener('input', majChampHeure);
 
 $('editValider').addEventListener('click', ()=>{
-  const t = taches.find(x=>x.id === tacheEnEdition);
+  const t = brouillonTache && brouillonTache.id === tacheEnEdition ? brouillonTache : taches.find(x=>x.id === tacheEnEdition);
   const titre = $('editTitre').value.trim();
   if(!t) return fermerEdition();
   if(!titre){ toast('Le texte ne peut pas être vide', 'alerte'); return; }
@@ -329,9 +389,17 @@ $('editValider').addEventListener('click', ()=>{
   t.cat = canoniqueCat($('editCat').value);
   t.note = $('editNote').value.replace(/\r\n?/g, '\n').trim().slice(0, MAX_NOTE);
   t.repeter = $('editRepeter').value;
-  if(t.repeter && !t.date) t.date = auj();
+  if(!t.date && (t.repeter || t === brouillonTache)) t.date = auj(); // une tâche répétée ou nouvelle a besoin d'une date (sinon : stock)
+  if(t === brouillonTache){ fermerEdition(); enregistrerNouvelle(t); return; }
   sauvegarder(); rendre(); fermerEdition();
 });
+$('editStock').addEventListener('click', ()=>{
+  const t = taches.find(x=>x.id === tacheEnEdition);
+  fermerEdition();
+  if(!t) return;
+  if(t.stock) remettreDuStock([t]); else mettreEnStock(t);
+});
+$('btnStock').addEventListener('click', ()=>{ basculerFiltre(filtre === 'stock' ? 'afaire' : 'stock'); window.scrollTo({ top:0, behavior:'smooth' }); });
 $('editSuppr').addEventListener('click', ()=>{
   const id = tacheEnEdition;
   fermerEdition();
@@ -371,32 +439,35 @@ $('editSous').addEventListener('click', e=>{
 
 $('editTitre').addEventListener('keydown', e=>{ if(e.key === 'Enter') $('editValider').click(); });
 
-// --- Sauvegarde ---
-function fermerDonnees(){ $('overlayDonnees').classList.remove('actif'); }
-function majBoutonHistorique(){
-  const n = taches.filter(t=>t.archive).length;
-  $('btnHistorique').hidden = !n;
-  $('btnHistorique').textContent = `Effacer l'historique archivé (${n})`;
-}
-$('btnDonnees').addEventListener('click', ()=>{ majBoutonHistorique(); $('overlayDonnees').classList.add('actif'); });
-$('btnHistorique').addEventListener('click', ()=>{
-  const n = taches.filter(t=>t.archive).length;
-  if(!n) return;
-  if(!confirm(`Effacer définitivement ${n} tâche${n>1?'s':''} archivée${n>1?'s':''} ? Elles disparaîtront aussi de l'onglet Analyse.`)) return;
-  taches = taches.filter(t=>!t.archive);
-  sauvegarder(); rendre(); fermerDonnees();
-  toast('Historique effacé');
+// --- Fermeture des feuilles (clic à côté, Échap) ---
+// (Réglages et saisie secrète gèrent la leur : voir reglages.js et securite.js)
+document.querySelectorAll('#overlayEdit, #overlayObjectif').forEach(o=>{
+  o.addEventListener('click', e=>{ if(e.target === o){ fermerEdition(); fermerObjectif(); } });
 });
-$('donneesFermer').addEventListener('click', fermerDonnees);
-$('btnExport').addEventListener('click', exporter);
-$('btnImport').addEventListener('click', ()=>$('fichierImport').click());
-$('fichierImport').addEventListener('change', e=>{
-  if(e.target.files[0]) importer(e.target.files[0]);
-  e.target.value = '';
+document.addEventListener('keydown', e=>{ if(e.key === 'Escape'){ fermerEdition(); fermerObjectif(); } });
+
+// --- Journal : filtres ; groupes : replier et « Voir les autres » ---
+$('liste').addEventListener('click', e=>{
+  const g = e.target.closest('[data-gtoggle]'), p = e.target.closest('[data-gplus]'), b = e.target.closest('[data-jfiltre]');
+  if(g){
+    basculerGroupe(g.dataset.gtoggle); rendre();
+  } else if(p){
+    const k = p.dataset.gplus;
+    if(groupesEtendus.has(k)) groupesEtendus.delete(k); else groupesEtendus.add(k);
+    rendre();
+  } else if(b){
+    filtreJournal = b.dataset.jfiltre;
+    rendre();
+  }
 });
 
-// --- Fermeture des feuilles (clic à côté, Échap) ---
-document.querySelectorAll('.overlay').forEach(o=>{
-  o.addEventListener('click', e=>{ if(e.target === o){ fermerEdition(); fermerDonnees(); fermerObjectif(); } });
+
+// Le bouton flottant n'apparaît que lorsque le formulaire d'ajout n'est plus visible
+if('IntersectionObserver' in window){
+  new IntersectionObserver(([e])=>$('fab').classList.toggle('visible', !e.isIntersecting)).observe($('formAjout'));
+} else $('fab').classList.add('visible');
+
+// Bouton flottant « + » : ramène en haut et ouvre la saisie d'une nouvelle tâche
+$('fab').addEventListener('click', ()=>{
+  ouvrirEdition(construireBrouillon($('inputTitre').value.trim()), true); // ouvre la fiche d'ajout complète
 });
-document.addEventListener('keydown', e=>{ if(e.key === 'Escape'){ fermerEdition(); fermerDonnees(); fermerObjectif(); } });

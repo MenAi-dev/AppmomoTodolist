@@ -1,20 +1,28 @@
 // Pense à changer ce numéro à chaque modification des fichiers,
 // sinon les anciens fichiers restent servis depuis le cache.
-const CACHE_NAME = 'mes-taches-cache-v15';
+const CACHE_NAME = 'momo-taches-cache-v29';
 const URLS_A_METTRE_EN_CACHE = [
   './',
   './index.html',
   './css/base.css',
   './css/components.css',
   './css/modals.css',
+  './css/design.css',
+  './fonts/inter-latin.woff2',
+  './js/precoce.js',
   './js/helpers.js',
   './js/parser.js',
-  './js/gestes.js',
-  './js/theme.js',
+  './js/journal.js',
   './js/storage.js',
   './js/rappels.js',
   './js/render.js',
+  './js/recurrentes.js',
+  './js/stock.js',
+  './js/courbe.js',
   './js/events.js',
+  './js/gestes.js',
+  './js/reglages.js',
+  './js/securite.js',
   './js/app.js',
   './manifest.json',
   './icons/icon-192.png',
@@ -31,7 +39,7 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(noms =>
-      Promise.all(noms.filter(n => n !== CACHE_NAME).map(n => caches.delete(n)))
+      Promise.all(noms.filter(n => n.startsWith('momo-taches-') && n !== CACHE_NAME).map(n => caches.delete(n)))
     )
   );
   self.clients.claim();

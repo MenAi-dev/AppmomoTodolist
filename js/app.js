@@ -1,4 +1,5 @@
 function init(){
+  chargerJournal();
   charger();
   rendre();
   majOptionsAjout();

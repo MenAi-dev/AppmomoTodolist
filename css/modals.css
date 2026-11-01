@@ -67,3 +67,6 @@
   .rappel-avance input{width:72px; text-align:center;}
   .aide{margin-top:8px; font-size:0.74rem; line-height:1.4; color:var(--gris);}
   .aide:empty{display:none;}
+
+  .notif-actions{margin-top:10px;}
+  #overlayDonnees .theme-titre:first-of-type{margin-top:0;}

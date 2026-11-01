@@ -1,5 +1,5 @@
 // Rappels : une alerte quelques minutes avant l'heure d'une tâche.
-// Limite iPhone : sans serveur, l'alerte ne peut partir que tant que l'app tourne encore (ouverte ou récemment utilisée).
+// Limite : sans serveur, l'alerte ne peut partir que tant que l'app tourne encore (ouverte ou récemment utilisée).
 const CLE_AVANCE = 'todoAvance';
 let avanceDefaut = 10; // minutes proposées par défaut
 try{ const n = parseInt(localStorage.getItem(CLE_AVANCE), 10); if(n >= 0 && n <= 1440) avanceDefaut = n; }catch(_){}
@@ -11,15 +11,15 @@ function enregistrerAvanceDefaut(n){
 const avanceDe = t => (t.avance === null || t.avance === undefined) ? avanceDefaut : t.avance;
 const momentDe = t => new Date(t.date + 'T' + t.heure + ':00').getTime();
 const alerteDe = t => momentDe(t) - avanceDe(t) * 60000;
-const rappelsActifs = () => taches.filter(t => !t.fait && !t.archive && t.date && t.heure);
+const rappelsActifs = () => taches.filter(t => !t.fait && !t.archive && !t.stock && t.date && t.heure);
 
 // --- Notifications système ---
 function aideNotification(){
   if(!('Notification' in window)) return "Pour recevoir une notification : Partager → Sur l'écran d'accueil, puis ouvre l'app depuis l'icône. Sinon, tu verras l'alerte dans l'app.";
-  if(Notification.permission === 'denied') return "Notifications bloquées dans les réglages de l'iPhone : l'alerte s'affichera seulement dans l'app.";
-  return "Alerte envoyée tant que l'app n'a pas été fermée par iOS ; elle s'affiche aussi en haut de l'app à l'ouverture.";
+  if(Notification.permission === 'denied') return "Notifications bloquées dans les réglages d'Android : l'alerte s'affichera seulement dans l'app.";
+  return "L'alerte arrive quelques minutes avant l'heure, tant que l'app est ouverte ou récemment utilisée.";
 }
-// À appeler depuis un geste (clic), sinon iOS refuse la demande
+// À appeler depuis un geste (clic), sinon le navigateur refuse la demande
 function demanderNotifications(){
   try{ if('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); }catch(_){}
 }

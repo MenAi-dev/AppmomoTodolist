@@ -15,7 +15,7 @@
     l.classList.toggle('glisse-d', dx > 0);
     l.classList.toggle('glisse-g', dx < 0);
     const arme = Math.abs(dx) >= seuil(max);
-    if(arme && !g.arme && navigator.vibrate) navigator.vibrate(8);
+    if(arme && !g.arme) vibrer(8);
     g.arme = arme;
     l.classList.toggle('arme', arme);
   }
